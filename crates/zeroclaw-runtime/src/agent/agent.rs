@@ -816,9 +816,10 @@ impl Agent {
         self.model_name = model_name;
     }
 
-    /// Return the names of all registered tools.  Test-only — avoids
-    /// exposing `Box<dyn Tool>` across the crate boundary.
-    #[cfg(test)]
+    /// Return the names of all registered tools. For tests and
+    /// embedding-host harnesses (e.g. asserting peripheral tools reached a
+    /// `from_config` agent) — names only, so `Box<dyn Tool>` still never
+    /// crosses the crate boundary.
     pub fn tool_names(&self) -> Vec<&str> {
         self.tools.iter().map(|t| t.name()).collect()
     }
