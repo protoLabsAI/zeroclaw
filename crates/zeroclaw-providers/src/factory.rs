@@ -1121,6 +1121,14 @@ impl FamilyProviderFactory for LlamacppModelProviderConfig {
         if opts.merge_system_into_user {
             p = p.with_merge_system_into_user();
         }
+        // `native_tools = false` forces prompt-guided tool fallback — same
+        // opt the Groq factory honors. Needed when the llama.cpp-compatible
+        // server behind this alias doesn't implement the `tools` field of
+        // chat/completions (it gets silently dropped and the model never
+        // sees the tool list).
+        if opts.native_tools == Some(false) {
+            p = p.without_native_tools();
+        }
         Ok(apply_compat_options(p, opts))
     }
 }

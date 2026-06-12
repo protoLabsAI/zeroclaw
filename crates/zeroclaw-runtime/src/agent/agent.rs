@@ -816,9 +816,10 @@ impl Agent {
         self.model_name = model_name;
     }
 
-    /// Return the names of all registered tools.  Test-only — avoids
-    /// exposing `Box<dyn Tool>` across the crate boundary.
-    #[cfg(test)]
+    /// Return the names of all registered tools. For tests and
+    /// embedding-host harnesses (e.g. asserting peripheral tools reached a
+    /// `from_config` agent) — names only, so `Box<dyn Tool>` still never
+    /// crosses the crate boundary.
     pub fn tool_names(&self) -> Vec<&str> {
         self.tools.iter().map(|t| t.name()).collect()
     }
@@ -1087,6 +1088,17 @@ impl Agent {
         let reaction_handle = all_tools_result.reaction_handle;
         let poll_handle = all_tools_result.poll_handle;
         let escalate_handle = all_tools_result.escalate_handle;
+
+        // ── Peripheral tools (parity with loop_::process_message) ──────
+        // Embedding hosts register product tools through
+        // `loop_::register_peripheral_tools_fn`; the process_message path
+        // extends its registry from that factory, but direct Agent
+        // construction (gateway WS / ACP / hosts driving `turn_streamed`)
+        // never consulted it, so host-registered tools silently vanished
+        // from streamed sessions. Resolve from the same factory here,
+        // before the policy filter, so both construction paths see the
+        // identical tool surface.
+        tools.extend(crate::agent::loop_::load_peripheral_tools(config.peripherals.clone()).await);
 
         // ── Built-in SecurityPolicy tool gate (parity with agent::run) ──
         // Apply the agent's allowlist (`allowed_tools`) AND denylist
